@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#28634c">
+  <meta name="description" content="リヴリーのHPwrを24時に480に。今すぐ・指定時刻の水やり回数と回復の無駄を計算します。">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="./styles.css">
+  <script defer src="./calculator.js"></script>
+  <script defer src="./app.js"></script>
+  <title>リヴリー HPwr調整</title>
+</head>
+<body>
+  <main class="wrap">
+    <header class="page-header">
+      <div class="brand"><img src="./icon.svg" alt="" width="40" height="40"><span>LIVLY <b>HPwr planner</b></span></div>
+      <p class="eyebrow">今日の回復を、上手に使おう。</p>
+      <h1>24時に、HPwr 480。</h1>
+      <p class="intro">満タンで一日を終えるための<br>水やり回数を計算します。</p>
+      <div class="rules" aria-label="計算条件"><span>上限 <b>480</b></span><span>1分で <b>＋1</b></span><span>水やり <b>−10</b></span></div>
+    </header>
+    <p id="day-warning" class="notice warning" role="status" hidden>日付が変わりました。ゲーム内のHPwrを確認し、「今の時刻に更新」を押してください。</p>
+
+    <form id="planner" class="panel" novalidate>
+      <div class="section-heading"><span class="step">01</span><h2>いまの状態</h2></div>
+      <label for="hp">現在のHPwr</label>
+      <div class="hp-field"><input id="hp" name="hp" type="number" inputmode="numeric" min="0" max="480" step="1" placeholder="0〜480" aria-describedby="hp-hint hp-error" required><span>/ 480</span></div>
+      <p id="hp-hint" class="hint">ゲーム内で確認した数値を入力してください。</p>
+      <p id="hp-error" class="error" aria-live="polite"></p>
+      <div class="label-row"><label for="current">HPwrを確認した時刻</label><button id="now" class="text-button" type="button">今の時刻に更新</button></div>
+      <input id="current" name="current" type="time" step="60" aria-describedby="current-hint current-error" required>
+      <p id="current-hint" class="hint">時刻は自動で進みません。HPwrと同じ時点に合わせてください。</p>
+      <p id="current-error" class="error" aria-live="polite"></p>
+      <fieldset class="mode-fieldset">
+        <legend>いつ水やりする？</legend>
+        <div class="mode-switch">
+          <label><input type="radio" name="mode" value="now" checked><span>今すぐ</span></label>
+          <label><input type="radio" name="mode" value="scheduled"><span>時刻を指定</span></label>
+        </div>
+      </fieldset>
+      <div id="future-box" class="future-box" hidden>
+        <label for="future">水やり予定時刻</label>
+        <input id="future" name="future" type="time" step="60" value="21:00" aria-describedby="future-hint future-error" disabled>
+        <p id="future-hint" class="hint">確認した時刻以降、同じ日の23:59まで指定できます。</p>
+        <p id="future-error" class="error" aria-live="polite"></p>
+      </div>
+    </form>
+
+    <div id="empty-state" class="empty-state">↳ HPwrを入力すると、ここに結果が表示されます。</div>
+    <section id="result" class="panel result-panel" aria-labelledby="result-title" aria-live="polite" aria-atomic="true" hidden>
+      <div class="section-heading"><span class="step">02</span><h2 id="result-title">おすすめの水やり</h2></div>
+      <div class="hero">
+        <p id="when" class="hero-caption"></p>
+        <p class="water-count"><span id="water">—</span><span class="unit">回</span></p>
+        <p id="used" class="hero-caption"></p>
+        <span id="goal-badge" class="goal-badge"></span>
+      </div>
+      <div class="hp-flow" aria-label="水やり前後のHPwr">
+        <div><span>水やり直前</span><strong id="before">—</strong></div><span class="flow-arrow" aria-hidden="true">→</span>
+        <div><span>水やり直後</span><strong id="after">—</strong></div><span class="flow-arrow" aria-hidden="true">→</span>
+        <div><span>24:00</span><strong id="end">—</strong></div>
+      </div>
+      <p id="notice" class="notice"></p>
+      <div class="waste-heading"><h3>24時までの回復の無駄</h3><span><b id="waste-total">—</b> HPwr</span></div>
+      <dl class="details-list">
+        <div><dt>確認した時刻 → 水やり前</dt><dd id="waste-before">—</dd></div>
+        <div><dt>水やり後 → 24:00</dt><dd id="waste-after">—</dd></div>
+        <div><dt>水やり後の満タン時刻</dt><dd id="full-after">—</dd></div>
+        <div><dt>水やりしない場合の満タン時刻</dt><dd id="full">—</dd></div>
+      </dl>
+      <p class="hint">上限480の間に回復するはずだった分を「無駄」として表示しています。</p>
+    </section>
+
+    <details class="panel help-panel">
+      <summary>計算の考え方・使い方</summary>
+      <ul>
+        <li>24時に480を確保できる範囲で、水やり回数を最大にします。水やりしなくても480に届かない日は、0回を案内します。</li>
+        <li>選んだ時刻にまとめて水やりする計算です。水やり中の時間経過は含めません。</li>
+        <li>10単位で消費するため、1〜9 HPwrの回復が余る場合があります。早い時刻では残量が足りず、さらに回復が余ることもあります。</li>
+        <li>1分単位で計算し、回復の秒数は考慮しません。途中で水やりなどをしたら、HPwrと確認時刻を更新してください。</li>
+        <li>「今すぐ」は入力した確認時刻を使います。日付をまたぐ予約には対応していません。</li>
+      </ul>
+    </details>
+    <aside class="panel install-panel" aria-labelledby="install-title">
+      <h2 id="install-title">ホーム画面から、すぐ計算。</h2>
+      <p>インストールすればアプリのように開けます。</p>
+      <button id="install" class="primary-button" type="button" hidden>アプリをインストール</button>
+      <details><summary>スマホへの追加方法</summary><p>iPhone・iPad：Safariの共有メニューから「ホーム画面に追加」。<br>Android：ブラウザのメニューから「アプリをインストール」または「ホーム画面に追加」。表示名はブラウザで異なります。</p></details>
+      <p id="offline-status" class="hint" role="status">オフライン対応を確認しています…</p>
+      <div id="update-box" hidden><p class="hint">新しいバージョンがあります。更新すると入力内容がリセットされます。</p><button id="update" type="button">最新版に更新</button></div>
+    </aside>
+    <footer>リヴリー HPwr調整ツール · 非公式<br>計算結果は目安です。ゲーム内の残量も確認してください。</footer>
+    <noscript><p class="notice warning">計算にはJavaScriptを有効にしてください。</p></noscript>
+  </main>
+</body>
+</html>

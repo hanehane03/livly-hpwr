@@ -1,0 +1,12 @@
+{
+  "name": "livly-hpwr-planner",
+  "version": "2.0.0",
+  "private": true,
+  "description": "リヴリーの24時のHPwrを調整する、依存パッケージ不要のPWA",
+  "scripts": {
+    "test": "node --test",
+    "build": "node scripts/build.cjs",
+    "start": "node scripts/serve.cjs"
+  },
+  "engines": { "node": ">=18" }
+}
